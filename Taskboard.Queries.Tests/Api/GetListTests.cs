@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Internal;
 using Microsoft.AspNetCore.Mvc;
@@ -13,13 +14,13 @@ namespace Taskboard.Queries.Tests.Api
     public class GetListTests
     {
         [TestMethod]
-        public void ValidRequest_ReturnsCorrectResponse()
+        public async Task ValidRequest_ReturnsCorrectResponse()
         {
             var logger = new Mock<ILogger>().Object;
             var id = Guid.NewGuid().ToString();
             var request = new DefaultHttpRequest(new DefaultHttpContext());
 
-            var result = GetList.Run(request, id, logger) as OkObjectResult;
+            var result = await GetList.Run(request, id, logger) as OkObjectResult;
 
             Assert.IsNotNull(result);
 

@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using System.Web.Http;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
@@ -21,7 +22,10 @@ namespace Taskboard.Queries.Api
 
             var result = await handler.Execute(query);
 
-            return new OkObjectResult(result);
+            return result.Match<IActionResult>(
+                content => new OkObjectResult(content),
+                error => new InternalServerErrorResult()
+            );
         }
     }
 }

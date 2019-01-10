@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -9,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Taskboard.Queries.Api;
+using Taskboard.Queries.DTO;
 
 namespace Taskboard.Queries.Tests.Api
 {
@@ -19,7 +19,6 @@ namespace Taskboard.Queries.Tests.Api
         public async Task ValidRequest_ReturnsCorrectResponse()
         {
             var logger = new Mock<ILogger>().Object;
-            var id = Guid.NewGuid().ToString();
             var request = new DefaultHttpRequest(new DefaultHttpContext());
 
             var result = await GetLists.Run(request, logger) as OkObjectResult;

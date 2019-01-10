@@ -1,4 +1,4 @@
-﻿namespace Taskboard.Queries
+﻿namespace Taskboard.Queries.DTO
 {
     public class ListDTO
     {

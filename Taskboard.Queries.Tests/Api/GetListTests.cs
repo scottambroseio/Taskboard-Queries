@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Taskboard.Queries.Api;
+using Taskboard.Queries.DTO;
 
 namespace Taskboard.Queries.Tests.Api
 {

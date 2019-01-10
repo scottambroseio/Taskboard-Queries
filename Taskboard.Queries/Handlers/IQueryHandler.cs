@@ -1,10 +1,12 @@
 ﻿using System.Threading.Tasks;
+using Optional;
+using Taskboard.Queries.Enums;
 using Taskboard.Queries.Queries;
 
 namespace Taskboard.Queries.Handlers
 {
     public interface IQueryHandler<TQuery, TResult> where TQuery : IQuery
     {
-        Task<TResult> Execute(TQuery query);
+        Task<Option<TResult, OperationFailure>> Execute(TQuery query);
     }
 }

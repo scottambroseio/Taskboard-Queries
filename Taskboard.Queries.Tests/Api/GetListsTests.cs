@@ -7,8 +7,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using Optional;
+using SimpleInjector;
 using Taskboard.Queries.Api;
 using Taskboard.Queries.DTO;
+using Taskboard.Queries.Enums;
+using Taskboard.Queries.Handlers;
+using Taskboard.Queries.Queries;
 
 namespace Taskboard.Queries.Tests.Api
 {
@@ -18,8 +23,17 @@ namespace Taskboard.Queries.Tests.Api
         [TestMethod]
         public async Task ValidRequest_ReturnsCorrectResponse()
         {
+            var handler = new Mock<IQueryHandler<GetListsQuery, IEnumerable<ListDTO>>>();
+            var container = new Container();
             var logger = new Mock<ILogger>().Object;
             var request = new DefaultHttpRequest(new DefaultHttpContext());
+
+            handler.Setup(h => h.Execute(It.IsAny<GetListsQuery>()))
+                .ReturnsAsync(
+                    Option.Some<IEnumerable<ListDTO>, OperationFailure>(new[]
+                        {new ListDTO {Id = "id", Name = "name"}}));
+            container.RegisterInstance(handler.Object);
+            GetList.Container = container;
 
             var result = await GetLists.Run(request, logger) as OkObjectResult;
 

@@ -7,6 +7,6 @@ namespace Taskboard.Queries.Handlers
 {
     public interface IQueryHandler<TQuery, TResult> where TQuery : IQuery
     {
-        Task<Option<TResult, OperationFailure>> Execute(TQuery query);
+        Task<Option<TResult, QueryFailure>> Execute(TQuery query);
     }
 }

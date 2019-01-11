@@ -1,18 +1,30 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Optional;
 using Taskboard.Queries.DTO;
 using Taskboard.Queries.Enums;
 using Taskboard.Queries.Queries;
+using Taskboard.Queries.Repositories;
 
 namespace Taskboard.Queries.Handlers
 {
     public class GetListsQueryHandler : IQueryHandler<GetListsQuery, IEnumerable<ListDTO>>
     {
-        public Task<Option<IEnumerable<ListDTO>, OperationFailure>> Execute(GetListsQuery query)
+        private readonly IListRepository repo;
+
+        public GetListsQueryHandler(IListRepository repo)
         {
-            return Task.FromResult(
-                Option.Some<IEnumerable<ListDTO>, OperationFailure>(new[] {new ListDTO {Id = "id", Name = "name"}})
+            this.repo = repo ?? throw new ArgumentNullException(nameof(repo));
+        }
+
+        public async Task<Option<IEnumerable<ListDTO>, QueryFailure>> Execute(GetListsQuery query)
+        {
+            var result = await repo.GetAll();
+
+            return result.Match(
+                lists => Option.Some<IEnumerable<ListDTO>, QueryFailure>(lists),
+                failure => Option.None<IEnumerable<ListDTO>, QueryFailure>(QueryFailure.Error)
             );
         }
     }

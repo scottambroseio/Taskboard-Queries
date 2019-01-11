@@ -29,7 +29,7 @@ namespace Taskboard.Queries.Tests.Api
             var request = new DefaultHttpRequest(new DefaultHttpContext());
 
             handler.Setup(h => h.Execute(It.IsAny<GetListQuery>()))
-                .ReturnsAsync(Option.Some<ListDTO, OperationFailure>(new ListDTO {Id = id, Name = "name"}));
+                .ReturnsAsync(Option.Some<ListDTO, QueryFailure>(new ListDTO {Id = id, Name = "name"}));
             container.RegisterInstance(handler.Object);
             GetList.Container = container;
 

@@ -30,10 +30,10 @@ namespace Taskboard.Queries.Tests.Api
 
             handler.Setup(h => h.Execute(It.IsAny<GetListsQuery>()))
                 .ReturnsAsync(
-                    Option.Some<IEnumerable<ListDTO>, OperationFailure>(new[]
+                    Option.Some<IEnumerable<ListDTO>, QueryFailure>(new[]
                         {new ListDTO {Id = "id", Name = "name"}}));
             container.RegisterInstance(handler.Object);
-            GetList.Container = container;
+            GetLists.Container = container;
 
             var result = await GetLists.Run(request, logger) as OkObjectResult;
 

@@ -1,38 +1,52 @@
 ﻿using System;
+using System.Net;
 using System.Threading.Tasks;
-using Optional;
+using Microsoft.Azure.Documents;
+using Microsoft.Azure.Documents.Client;
 using Taskboard.Queries.DTO;
-using Taskboard.Queries.Enums;
+using Taskboard.Queries.Exceptions;
 using Taskboard.Queries.Queries;
-using Taskboard.Queries.Repositories;
 
 namespace Taskboard.Queries.Handlers
 {
     public class GetListQueryHandler : IQueryHandler<GetListQuery, ListDTO>
     {
-        private readonly IListRepository repo;
+        private readonly string collection;
+        private readonly string db;
+        private readonly IDocumentClient documentClient;
 
-        public GetListQueryHandler(IListRepository repo)
+        public GetListQueryHandler(IDocumentClient documentClient, string db,
+            string collection)
         {
-            this.repo = repo ?? throw new ArgumentNullException(nameof(repo));
+            this.documentClient = documentClient ?? throw new ArgumentNullException(nameof(documentClient));
+            this.db = !string.IsNullOrWhiteSpace(db) ? db : throw new ArgumentNullException(nameof(db));
+            this.collection = !string.IsNullOrWhiteSpace(collection)
+                ? collection
+                : throw new ArgumentNullException(nameof(collection));
         }
 
-        public async Task<Option<ListDTO, QueryFailure>> Execute(GetListQuery query)
+        public async Task<ListDTO> Execute(GetListQuery query)
         {
-            var result = await repo.GetById(query.Id);
+            try
+            {
+                var uri = UriFactory.CreateDocumentUri(db, collection, query.Id);
 
-            return result.Match(
-                list => Option.Some<ListDTO, QueryFailure>(list),
-                failure =>
+                var document = await documentClient.ReadDocumentAsync<ListDTO>(uri, new RequestOptions
                 {
-                    switch (failure)
-                    {
-                        case CosmosFailure.NotFound:
-                            return Option.None<ListDTO, QueryFailure>(QueryFailure.NotFound);
-                        default:
-                            return Option.None<ListDTO, QueryFailure>(QueryFailure.Error);
-                    }
+                    PartitionKey = new PartitionKey(query.Id)
                 });
+
+                return document.Document;
+            }
+            catch (DocumentClientException ex)
+            {
+                if (ex.StatusCode == HttpStatusCode.NotFound)
+                {
+                    throw ResourceNotFoundException.FromResourceId(query.Id);
+                }
+
+                throw DataAccessException.FromInnerException(ex);
+            }
         }
     }
 }

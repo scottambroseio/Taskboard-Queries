@@ -14,7 +14,6 @@ using SimpleInjector;
 using Taskboard.Queries.DTO;
 using Taskboard.Queries.Handlers;
 using Taskboard.Queries.Queries;
-using Taskboard.Queries.Repositories;
 
 namespace Taskboard.Queries.Api
 {
@@ -26,15 +25,21 @@ namespace Taskboard.Queries.Api
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "lists")] HttpRequest req, ILogger log)
         {
-            var query = new GetListsQuery();
-            var handler = Container.GetInstance<IQueryHandler<GetListsQuery, IEnumerable<ListDTO>>>();
+            try
+            {
+                var query = new GetListsQuery();
+                var handler = Container.GetInstance<IQueryHandler<GetListsQuery, IEnumerable<ListDTO>>>();
 
-            var result = await handler.Execute(query);
+                var result = await handler.Execute(query);
 
-            return result.Match<IActionResult>(
-                content => new OkObjectResult(content),
-                error => new InternalServerErrorResult()
-            );
+                return new OkObjectResult(result);
+            }
+            catch (Exception ex)
+            {
+                Container.GetInstance<TelemetryClient>().TrackException(ex);
+
+                return new InternalServerErrorResult();
+            }
         }
 
         private static Container BuildContainer()
@@ -48,11 +53,10 @@ namespace Taskboard.Queries.Api
             container.RegisterSingleton<IDocumentClient>(() =>
                 new DocumentClient(new Uri(Environment.GetEnvironmentVariable("COSMOS_ENDPOINT")),
                     Environment.GetEnvironmentVariable("COSMOS_KEY")));
-            container.Register<IListRepository>(() => new ListRepository(container.GetInstance<TelemetryClient>(),
-                container.GetInstance<IDocumentClient>(),
-                Environment.GetEnvironmentVariable("COSMOS_DB"),
-                Environment.GetEnvironmentVariable("COSMOS_COLLECTION")));
-            container.Register<IQueryHandler<GetListsQuery, IEnumerable<ListDTO>>, GetListsQueryHandler>();
+            container.Register<IQueryHandler<GetListsQuery, IEnumerable<ListDTO>>>(() =>
+                new GetListsQueryHandler(container.GetInstance<IDocumentClient>(),
+                    Environment.GetEnvironmentVariable("COSMOS_DB"),
+                    Environment.GetEnvironmentVariable("COSMOS_COLLECTION")));
 
             return container;
         }

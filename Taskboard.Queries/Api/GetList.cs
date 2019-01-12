@@ -11,10 +11,9 @@ using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using SimpleInjector;
 using Taskboard.Queries.DTO;
-using Taskboard.Queries.Enums;
+using Taskboard.Queries.Exceptions;
 using Taskboard.Queries.Handlers;
 using Taskboard.Queries.Queries;
-using Taskboard.Queries.Repositories;
 
 namespace Taskboard.Queries.Api
 {
@@ -27,22 +26,27 @@ namespace Taskboard.Queries.Api
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "list/{id}")] HttpRequest req, string id,
             ILogger log)
         {
-            var query = new GetListQuery {Id = id};
-            var handler = Container.GetInstance<IQueryHandler<GetListQuery, ListDTO>>();
+            try
+            {
+                var query = new GetListQuery {Id = id};
+                var handler = Container.GetInstance<IQueryHandler<GetListQuery, ListDTO>>();
 
-            var result = await handler.Execute(query);
+                var result = await handler.Execute(query);
 
-            return result.Match<IActionResult>(
-                content => new OkObjectResult(content),
-                error =>
-                {
-                    switch (error)
-                    {
-                        case QueryFailure.NotFound: return new NotFoundResult();
-                        default: return new InternalServerErrorResult();
-                    }
-                }
-            );
+                return new OkObjectResult(result);
+            }
+            catch (ResourceNotFoundException ex)
+            {
+                Container.GetInstance<TelemetryClient>().TrackException(ex);
+
+                return new NotFoundResult();
+            }
+            catch (Exception ex)
+            {
+                Container.GetInstance<TelemetryClient>().TrackException(ex);
+
+                return new InternalServerErrorResult();
+            }
         }
 
         private static Container BuildContainer()
@@ -56,11 +60,10 @@ namespace Taskboard.Queries.Api
             container.RegisterSingleton<IDocumentClient>(() =>
                 new DocumentClient(new Uri(Environment.GetEnvironmentVariable("COSMOS_ENDPOINT")),
                     Environment.GetEnvironmentVariable("COSMOS_KEY")));
-            container.Register<IListRepository>(() => new ListRepository(container.GetInstance<TelemetryClient>(),
+            container.Register<IQueryHandler<GetListQuery, ListDTO>>(() => new GetListQueryHandler(
                 container.GetInstance<IDocumentClient>(),
                 Environment.GetEnvironmentVariable("COSMOS_DB"),
                 Environment.GetEnvironmentVariable("COSMOS_COLLECTION")));
-            container.Register<IQueryHandler<GetListQuery, ListDTO>, GetListQueryHandler>();
 
             return container;
         }

@@ -1,31 +1,43 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
-using Optional;
+using Microsoft.Azure.Documents;
+using Microsoft.Azure.Documents.Client;
 using Taskboard.Queries.DTO;
-using Taskboard.Queries.Enums;
+using Taskboard.Queries.Exceptions;
 using Taskboard.Queries.Queries;
-using Taskboard.Queries.Repositories;
 
 namespace Taskboard.Queries.Handlers
 {
     public class GetListsQueryHandler : IQueryHandler<GetListsQuery, IEnumerable<ListDTO>>
     {
-        private readonly IListRepository repo;
+        private readonly string collection;
+        private readonly string db;
+        private readonly IDocumentClient documentClient;
 
-        public GetListsQueryHandler(IListRepository repo)
+        public GetListsQueryHandler(IDocumentClient documentClient, string db,
+            string collection)
         {
-            this.repo = repo ?? throw new ArgumentNullException(nameof(repo));
+            this.documentClient = documentClient ?? throw new ArgumentNullException(nameof(documentClient));
+            this.db = !string.IsNullOrWhiteSpace(db) ? db : throw new ArgumentNullException(nameof(db));
+            this.collection = !string.IsNullOrWhiteSpace(collection)
+                ? collection
+                : throw new ArgumentNullException(nameof(collection));
         }
 
-        public async Task<Option<IEnumerable<ListDTO>, QueryFailure>> Execute(GetListsQuery query)
+        public Task<IEnumerable<ListDTO>> Execute(GetListsQuery query)
         {
-            var result = await repo.GetAll();
+            try
+            {
+                var uri = UriFactory.CreateDocumentCollectionUri(db, collection);
 
-            return result.Match(
-                lists => Option.Some<IEnumerable<ListDTO>, QueryFailure>(lists),
-                failure => Option.None<IEnumerable<ListDTO>, QueryFailure>(QueryFailure.Error)
-            );
+                return Task.FromResult(documentClient.CreateDocumentQuery<ListDTO>(uri).AsEnumerable());
+            }
+            catch (DocumentClientException ex)
+            {
+                throw DataAccessException.FromInnerException(ex);
+            }
         }
     }
 }

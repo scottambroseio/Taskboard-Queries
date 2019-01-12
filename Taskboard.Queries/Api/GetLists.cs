@@ -6,12 +6,12 @@ using Microsoft.ApplicationInsights;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Documents;
-using Microsoft.Azure.Documents.Client;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using SimpleInjector;
 using Taskboard.Queries.DTO;
+using Taskboard.Queries.Extensions;
 using Taskboard.Queries.Handlers;
 using Taskboard.Queries.Queries;
 
@@ -46,13 +46,8 @@ namespace Taskboard.Queries.Api
         {
             var container = new Container();
 
-            container.RegisterSingleton(() => new TelemetryClient
-            {
-                InstrumentationKey = Environment.GetEnvironmentVariable("AI_INSTRUMENTATIONKEY")
-            });
-            container.RegisterSingleton<IDocumentClient>(() =>
-                new DocumentClient(new Uri(Environment.GetEnvironmentVariable("COSMOS_ENDPOINT")),
-                    Environment.GetEnvironmentVariable("COSMOS_KEY")));
+            container.WithTelemetryClient();
+            container.WithDocumentClient();
             container.Register<IQueryHandler<GetListsQuery, IEnumerable<ListDTO>>>(() =>
                 new GetListsQueryHandler(container.GetInstance<IDocumentClient>(),
                     Environment.GetEnvironmentVariable("COSMOS_DB"),

@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.Azure.Documents;
@@ -10,23 +9,15 @@ using Taskboard.Queries.Queries;
 
 namespace Taskboard.Queries.Handlers
 {
-    public class GetTaskQueryHandler : IQueryHandler<GetTaskQuery, TaskDTO>
+    public class GetTaskQueryHandler : QueryHandler<GetTaskQuery, TaskDTO>
     {
-        private readonly string collection;
-        private readonly string db;
-        private readonly IDocumentClient documentClient;
-
-        public GetTaskQueryHandler(IDocumentClient documentClient, string db,
-            string collection)
+        public GetTaskQueryHandler(IDocumentClient documentClient, string db, string collection) :
+            base(documentClient, db, collection)
         {
-            this.documentClient = documentClient ?? throw new ArgumentNullException(nameof(documentClient));
-            this.db = !string.IsNullOrWhiteSpace(db) ? db : throw new ArgumentNullException(nameof(db));
-            this.collection = !string.IsNullOrWhiteSpace(collection)
-                ? collection
-                : throw new ArgumentNullException(nameof(collection));
         }
 
-        public async Task<TaskDTO> Execute(GetTaskQuery query)
+
+        protected override async Task<TaskDTO> InternalExecute(GetTaskQuery query)
         {
             try
             {
@@ -46,14 +37,9 @@ namespace Taskboard.Queries.Handlers
 
                 return task;
             }
-            catch (DocumentClientException ex)
+            catch (DocumentClientException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
             {
-                if (ex.StatusCode == HttpStatusCode.NotFound)
-                {
-                    throw ResourceNotFoundException.FromResourceId(query.ListId);
-                }
-
-                throw DataAccessException.FromInnerException(ex);
+                throw ResourceNotFoundException.FromResourceId(query.ListId);
             }
         }
     }

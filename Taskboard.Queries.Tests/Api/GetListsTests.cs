@@ -22,23 +22,23 @@ namespace Taskboard.Queries.Tests.Api
     [TestClass]
     public class GetListsTests
     {
+        private static readonly TelemetryClient _telemetryClient = new TelemetryClient(new TelemetryConfiguration
+        {
+            DisableTelemetry = true
+        });
+
         [TestMethod]
-        public async Task ValidRequest_ReturnsListsOnSuccess()
+        public async Task Run_ReturnsListsOnSuccess()
         {
             var handler = new Mock<IQueryHandler<GetListsQuery, IEnumerable<ListDTO>>>();
             var container = new Container();
             var logger = new Mock<ILogger>().Object;
-            var client = new TelemetryClient(new TelemetryConfiguration
-            {
-                DisableTelemetry = true
-            });
             var request = new DefaultHttpRequest(new DefaultHttpContext());
 
             handler.Setup(h => h.Execute(It.IsAny<GetListsQuery>()))
                 .ReturnsAsync(new[] {new ListDTO {Id = "id", Name = "name"}});
-
             container.RegisterInstance(handler.Object);
-            container.RegisterInstance(client);
+            container.RegisterInstance(_telemetryClient);
             GetLists.Container = container;
 
             var result = await GetLists.Run(request, logger) as OkObjectResult;
@@ -56,21 +56,17 @@ namespace Taskboard.Queries.Tests.Api
         }
 
         [TestMethod]
-        public async Task ValidRequest_ReturnsServerErrorOnError()
+        public async Task Run_ReturnsServerErrorOnError()
         {
             var handler = new Mock<IQueryHandler<GetListsQuery, IEnumerable<ListDTO>>>();
             var container = new Container();
             var logger = new Mock<ILogger>().Object;
-            var client = new TelemetryClient(new TelemetryConfiguration
-            {
-                DisableTelemetry = true
-            });
             var request = new DefaultHttpRequest(new DefaultHttpContext());
 
             handler.Setup(h => h.Execute(It.IsAny<GetListsQuery>()))
                 .ThrowsAsync(new Exception());
             container.RegisterInstance(handler.Object);
-            container.RegisterInstance(client);
+            container.RegisterInstance(_telemetryClient);
             GetLists.Container = container;
 
             var result = await GetLists.Run(request, logger) as InternalServerErrorResult;
